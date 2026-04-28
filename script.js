@@ -22,6 +22,8 @@ function saveState() {
   localStorage.setItem(STATE_KEY, JSON.stringify(state));
 }
 let state = loadState();
+state.currentMonth = monthKey(new Date());
+saveState();
 
 /* ---------- utils ---------- */
 function monthKey(d) {
@@ -64,6 +66,9 @@ function makeRecordDate(monthStr) {
   const lastDay = new Date(y, m, 0);
   lastDay.setHours(12, 0, 0, 0);
   return lastDay;
+}
+function isCurrentMonth() {
+  return state.currentMonth === monthKey(new Date());
 }
 
 /* ---------- routing ---------- */
@@ -184,18 +189,21 @@ function renderHome() {
   });
   app.appendChild(cards);
 
-  const fab = el(`
-    <button class="fab" aria-label="지출 추가">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-    </button>
-  `);
-  fab.addEventListener('click', () => openAddModal());
-  app.appendChild(fab);
+  if (isCurrentMonth()) {
+    const fab = el(`
+      <button class="fab" aria-label="지출 추가">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    `);
+    fab.addEventListener('click', () => openAddModal());
+    app.appendChild(fab);
+  }
 
   app.appendChild(el(`<div class="brand">a budget journal</div>`));
 
   header.querySelector('#prev-month').addEventListener('click', () => changeMonth(-1));
   header.querySelector('#next-month').addEventListener('click', () => changeMonth(1));
+  header.querySelector('.month-display').addEventListener('click', () => openMonthPicker());
 }
 
 function changeMonth(delta) {
@@ -206,6 +214,19 @@ function changeMonth(delta) {
     render();
     app.classList.remove('fade-leave');
     app.classList.add(delta > 0 ? 'fade-enter-r' : 'fade-enter-l');
+    setTimeout(() => app.classList.remove('fade-enter-r', 'fade-enter-l'), 320);
+  }, 180);
+}
+function setMonth(monthStr) {
+  if (monthStr === state.currentMonth) return;
+  const dir = monthStr > state.currentMonth ? 1 : -1;
+  state.currentMonth = monthStr;
+  saveState();
+  app.classList.add('fade-leave');
+  setTimeout(() => {
+    render();
+    app.classList.remove('fade-leave');
+    app.classList.add(dir > 0 ? 'fade-enter-r' : 'fade-enter-l');
     setTimeout(() => app.classList.remove('fade-enter-r', 'fade-enter-l'), 320);
   }, 180);
 }
@@ -261,13 +282,15 @@ function renderCategory(cat) {
     app.appendChild(list);
   }
 
-  const fab = el(`
-    <button class="fab" aria-label="지출 추가">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-    </button>
-  `);
-  fab.addEventListener('click', () => openAddModal(cat));
-  app.appendChild(fab);
+  if (isCurrentMonth()) {
+    const fab = el(`
+      <button class="fab" aria-label="지출 추가">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    `);
+    fab.addEventListener('click', () => openAddModal(cat));
+    app.appendChild(fab);
+  }
 
   app.querySelector('#back-btn').addEventListener('click', () => {
     if (history.length > 1) history.back();
@@ -442,6 +465,56 @@ function openBudgetModal(cat) {
   setTimeout(() => input.focus(), 250);
 }
 
+function openMonthPicker() {
+  const [curY, curM] = state.currentMonth.split('-').map(Number);
+  const today = new Date();
+  const todayY = today.getFullYear();
+  const todayM = today.getMonth() + 1;
+  let viewYear = curY;
+
+  const { modal } = openModal(`
+    <div class="modal-title">이동</div>
+    <div class="modal-subtitle">${todayY} · ${MONTH_NAMES[todayM - 1]}</div>
+    <div class="year-stepper">
+      <button id="year-prev" aria-label="이전 연도">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="year-stepper-value" id="year-value"></div>
+      <button id="year-next" aria-label="다음 연도">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+    <div class="month-grid" id="month-grid"></div>
+  `);
+
+  const yearValue = modal.querySelector('#year-value');
+  const grid = modal.querySelector('#month-grid');
+
+  function renderGrid() {
+    yearValue.textContent = String(viewYear);
+    grid.innerHTML = '';
+    for (let m = 1; m <= 12; m++) {
+      const monthStr = `${viewYear}-${String(m).padStart(2, '0')}`;
+      const isSelected = (viewYear === curY && m === curM);
+      const isToday = (viewYear === todayY && m === todayM);
+      const cell = el(`
+        <button class="month-cell ${isSelected ? 'is-selected' : ''} ${isToday ? 'is-today' : ''}" data-month="${monthStr}">
+          ${MONTH_NAMES[m - 1].slice(0, 3)}
+        </button>
+      `);
+      cell.addEventListener('click', () => {
+        closeModal();
+        setTimeout(() => setMonth(monthStr), 200);
+      });
+      grid.appendChild(cell);
+    }
+  }
+
+  modal.querySelector('#year-prev').addEventListener('click', () => { viewYear--; renderGrid(); });
+  modal.querySelector('#year-next').addEventListener('click', () => { viewYear++; renderGrid(); });
+  renderGrid();
+}
+
 /* ---------- INTERACTIONS ---------- */
 function bindLongPress(target, onPress, onLong, threshold = 480) {
   let timer = null, triggered = false, startX = 0, startY = 0;
@@ -505,11 +578,11 @@ function bindSwipeDelete(target, onDelete, threshold = 90) {
       if (Math.abs(ddx) > 10) swiping = true;
       else return;
     }
-    if (ddx < 0) {
+    if (ddx > 0) {
       dx = ddx;
       target.style.transform = `translateX(${ddx}px)`;
       target.style.transition = 'none';
-      target.style.background = `rgba(165, 63, 43, ${Math.min(0.14, -ddx / 600)})`;
+      target.style.background = `rgba(165, 63, 43, ${Math.min(0.14, ddx / 600)})`;
     } else {
       target.style.transform = '';
       target.style.background = '';
@@ -518,7 +591,7 @@ function bindSwipeDelete(target, onDelete, threshold = 90) {
   function end() {
     if (startX === null) return;
     target.style.transition = '';
-    if (dx < -threshold) {
+    if (dx > threshold) {
       target.classList.add('is-deleting');
       setTimeout(() => onDelete(), 240);
     } else {

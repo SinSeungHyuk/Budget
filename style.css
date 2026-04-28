@@ -22,6 +22,7 @@
 
   --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
   --font-body: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   --r-sm: 12px;
   --r: 18px;
@@ -44,6 +45,13 @@ body {
   letter-spacing: -0.005em;
   min-height: 100vh; min-height: 100dvh;
   overflow-x: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 body::before {
@@ -98,15 +106,21 @@ body::before {
   color: var(--ink);
 }
 
-.month-display { text-align: center; }
+.month-display {
+  text-align: center;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 10px;
+  transition: background 180ms var(--ease-snap);
+}
+.month-display:active { background: var(--rule-soft); }
 .month-year {
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
   color: var(--ink-mute);
   letter-spacing: 0.22em;
-  text-transform: uppercase;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 .month-name {
   font-family: var(--font-display);
@@ -135,20 +149,21 @@ body::before {
   text-transform: uppercase;
 }
 .summary-amount {
-  font-family: var(--font-display);
-  font-size: 36px;
-  font-weight: 360;
-  font-variation-settings: 'opsz' 144, 'SOFT' 25;
-  letter-spacing: -0.025em;
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 400;
+  letter-spacing: -0.03em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 .summary-amount .currency {
-  font-size: 19px;
+  font-family: var(--font-mono);
+  font-size: 14px;
   margin-right: 4px;
-  color: var(--ink-soft);
-  font-style: italic;
-  font-variation-settings: 'opsz' 30, 'SOFT' 60;
+  color: var(--ink-mute);
+  font-weight: 400;
+  letter-spacing: 0;
+  vertical-align: 0.08em;
 }
 
 /* ============ CARDS ============ */
@@ -167,8 +182,6 @@ body::before {
   position: relative;
   overflow: hidden;
   cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
   transition: transform 180ms var(--ease-snap), border-color 180ms var(--ease-snap), background 180ms var(--ease-snap);
   animation: card-in 0.7s var(--ease-out) backwards;
   touch-action: pan-y;
@@ -198,13 +211,14 @@ body::before {
   color: var(--ink);
 }
 .card-pct {
+  font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
   color: var(--ink-mute);
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
 }
-.card-pct.over { color: var(--warn); font-weight: 600; }
+.card-pct.over { color: var(--warn); font-weight: 500; }
 .card-pct.dash {
   font-family: var(--font-display);
   font-style: italic;
@@ -214,24 +228,23 @@ body::before {
 }
 
 .card-amount {
-  font-family: var(--font-display);
-  font-size: 30px;
-  font-weight: 360;
-  font-variation-settings: 'opsz' 144, 'SOFT' 30;
-  letter-spacing: -0.018em;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -0.025em;
   line-height: 1;
   color: var(--ink);
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 14px;
   font-variant-numeric: tabular-nums;
 }
 .card-amount .limit {
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--ink-mute);
-  font-variation-settings: 'opsz' 14, 'SOFT' 30;
-  font-weight: 380;
+  font-weight: 400;
   letter-spacing: 0;
 }
 
@@ -317,28 +330,29 @@ body::before {
 }
 .detail-title { text-align: center; }
 .detail-title-name {
-  font-size: 11px;
-  font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
   color: var(--ink-mute);
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
 }
 .detail-title-amount {
-  font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 380;
-  font-variation-settings: 'opsz' 144, 'SOFT' 25;
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 400;
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
 .detail-title-amount .currency {
-  font-size: 18px;
-  color: var(--ink-soft);
-  font-style: italic;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-mute);
+  font-weight: 400;
   margin-right: 3px;
-  font-variation-settings: 'opsz' 30, 'SOFT' 60;
+  vertical-align: 0.08em;
 }
 
 .entries { padding: 0 0 140px; }
@@ -352,16 +366,15 @@ body::before {
   align-items: center;
   border-bottom: 1px solid var(--rule-soft);
   cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
   animation: entry-in 0.5s var(--ease-out) backwards;
   touch-action: pan-y;
 }
 .entry-info { min-width: 0; }
 .entry-date {
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--ink-mute);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   margin-bottom: 4px;
   font-variant-numeric: tabular-nums;
 }
@@ -376,16 +389,15 @@ body::before {
 }
 .entry-memo.empty { color: var(--ink-mute); font-weight: 400; font-style: italic; }
 .entry-amount {
-  font-family: var(--font-display);
-  font-size: 21px;
-  font-weight: 380;
-  font-variation-settings: 'opsz' 144, 'SOFT' 30;
-  letter-spacing: -0.012em;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 .entry.is-pressing { background: var(--rule-soft); }
 .entry.is-deleting {
-  transform: translateX(-110%) !important;
+  transform: translateX(110%) !important;
   opacity: 0;
   transition: transform 0.24s var(--ease-snap), opacity 0.24s !important;
 }
@@ -523,11 +535,10 @@ body::before {
 .field-input:focus { border-color: var(--ink); }
 .field-input::placeholder { color: var(--ink-mute); opacity: 0.55; }
 .field-input.is-amount {
-  font-family: var(--font-display);
-  font-size: 40px;
-  font-weight: 380;
-  font-variation-settings: 'opsz' 144, 'SOFT' 25;
-  letter-spacing: -0.025em;
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: -0.03em;
   text-align: left;
   font-variant-numeric: tabular-nums;
   padding: 12px 0 14px;
@@ -564,6 +575,76 @@ body::before {
 .btn-secondary { background: transparent; color: var(--ink-soft); border: 1px solid var(--rule); }
 .btn-primary { background: var(--ink); color: var(--paper); }
 .btn-primary:disabled { opacity: 0.32; cursor: not-allowed; }
+
+/* ============ MONTH PICKER ============ */
+.year-stepper {
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  align-items: center;
+  margin-bottom: 18px;
+  gap: 12px;
+}
+.year-stepper button {
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  cursor: pointer;
+  color: var(--ink-soft);
+  transition: background 180ms var(--ease-snap), transform 180ms var(--ease-snap);
+}
+.year-stepper button:active {
+  background: var(--rule-soft);
+  transform: scale(0.92);
+}
+.year-stepper-value {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 500;
+  text-align: center;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.month-cell {
+  position: relative;
+  background: transparent;
+  border: 1px solid var(--rule-soft);
+  border-radius: 12px;
+  padding: 16px 0 14px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 400;
+  font-variation-settings: 'opsz' 144, 'SOFT' 30;
+  color: var(--ink-soft);
+  cursor: pointer;
+  letter-spacing: -0.01em;
+  transition: all 180ms var(--ease-snap);
+}
+.month-cell:active { transform: scale(0.95); }
+.month-cell.is-selected {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.month-cell.is-today::after {
+  content: '';
+  position: absolute;
+  top: 8px; right: 9px;
+  width: 5px; height: 5px;
+  border-radius: 999px;
+  background: var(--olive);
+}
+.month-cell.is-selected.is-today::after {
+  background: var(--paper);
+}
 
 /* ============ BRAND ============ */
 .brand {
