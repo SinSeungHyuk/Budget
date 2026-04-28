@@ -1,0 +1,20 @@
+{
+  "name": "Budget — 가계부",
+  "short_name": "Budget",
+  "description": "개인용 가계부",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F1E6",
+  "theme_color": "#F5F1E6",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
