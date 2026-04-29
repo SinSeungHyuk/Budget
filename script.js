@@ -582,46 +582,23 @@ function showToast(message) {
 
 /* ---------- MODALS ---------- */
 let modalIsOpen = false;
-function bindKeyboardOffset(modal) {
-  const onIn = (e) => {
-    if (e.target.matches('input, textarea')) modal.classList.add('is-kb-up');
-  };
-  const onOut = () => setTimeout(() => {
-    const ae = document.activeElement;
-    if (!ae || !ae.matches('input, textarea')) modal.classList.remove('is-kb-up');
-  }, 100);
-  modal.addEventListener('focusin', onIn);
-  modal.addEventListener('focusout', onOut);
-  return () => {
-    modal.removeEventListener('focusin', onIn);
-    modal.removeEventListener('focusout', onOut);
-  };
-}
 function openModal(content) {
   closeModal(true);
   const backdrop = el(`<div class="modal-backdrop"></div>`);
   const modal = el(`<div class="modal"><div class="modal-handle"></div>${content}</div>`);
   backdrop.appendChild(modal);
   modalRoot.appendChild(backdrop);
-  let downOnBackdrop = false;
-  backdrop.addEventListener('pointerdown', e => {
-    downOnBackdrop = (e.target === backdrop);
-  });
   backdrop.addEventListener('click', e => {
-    if (e.target === backdrop && downOnBackdrop) closeModal();
-    downOnBackdrop = false;
+    if (e.target === backdrop) closeModal();
   });
   requestAnimationFrame(() => backdrop.classList.add('is-open'));
   modalIsOpen = true;
   history.pushState({ modal: true }, '');
-  modal._kbCleanup = bindKeyboardOffset(modal);
   return { backdrop, modal };
 }
 function closeModal(immediate = false) {
   const bd = modalRoot.querySelector('.modal-backdrop');
   if (!bd) return;
-  const modal = bd.querySelector('.modal');
-  if (modal && modal._kbCleanup) { modal._kbCleanup(); modal._kbCleanup = null; }
   const wasOpen = modalIsOpen;
   modalIsOpen = false;
   if (immediate) {
