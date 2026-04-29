@@ -578,7 +578,7 @@ body::before {
 .modal {
   position: fixed;
   left: 50%;
-  bottom: var(--kb-h, 0px);
+  bottom: 0;
   transform: translateX(-50%) translateY(105%);
   width: 100%;
   max-width: 480px;
@@ -586,11 +586,18 @@ body::before {
   border-radius: 28px 28px 0 0;
   padding: 8px var(--pad) calc(env(safe-area-inset-bottom) + 24px);
   z-index: 101;
-  transition: transform 0.42s var(--ease-out), bottom 0.2s var(--ease-out);
+  transition: transform 0.42s var(--ease-out);
   max-height: 90vh;
   overflow-y: auto;
 }
 .modal-backdrop.is-open .modal { transform: translateX(-50%) translateY(0); }
+.modal.is-kb-up {
+  top: 0;
+  bottom: auto;
+  transform: translateX(-50%) translateY(-105%);
+  border-radius: 0 0 28px 28px;
+}
+.modal-backdrop.is-open .modal.is-kb-up { transform: translateX(-50%) translateY(0); }
 
 .modal-handle {
   width: 36px; height: 4px;

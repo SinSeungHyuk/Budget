@@ -587,11 +587,10 @@ function bindKeyboardOffset(modal) {
   const vv = window.visualViewport;
   const update = () => {
     const kbH = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-    modal.style.setProperty('--kb-h', kbH + 'px');
+    modal.classList.toggle('is-kb-up', kbH > 100);
   };
   vv.addEventListener('resize', update);
   vv.addEventListener('scroll', update);
-  update();
   return () => {
     vv.removeEventListener('resize', update);
     vv.removeEventListener('scroll', update);
