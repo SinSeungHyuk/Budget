@@ -374,6 +374,7 @@ function showToast(message) {
 }
 
 /* ---------- MODALS ---------- */
+let modalIsOpen = false;
 function openModal(content) {
   closeModal(true);
   const backdrop = el(`<div class="modal-backdrop"></div>`);
@@ -384,17 +385,30 @@ function openModal(content) {
     if (e.target === backdrop) closeModal();
   });
   requestAnimationFrame(() => backdrop.classList.add('is-open'));
+  modalIsOpen = true;
+  history.pushState({ modal: true }, '');
   return { backdrop, modal };
 }
 function closeModal(immediate = false) {
   const bd = modalRoot.querySelector('.modal-backdrop');
   if (!bd) return;
-  if (immediate) { bd.remove(); return; }
-  bd.classList.remove('is-open');
-  setTimeout(() => bd.remove(), 360);
-  // 입력 포커스 해제 (키보드 내려가도록)
-  document.activeElement && document.activeElement.blur && document.activeElement.blur();
+  const wasOpen = modalIsOpen;
+  modalIsOpen = false;
+  if (immediate) {
+    bd.remove();
+  } else {
+    bd.classList.remove('is-open');
+    setTimeout(() => bd.remove(), 360);
+    document.activeElement && document.activeElement.blur && document.activeElement.blur();
+  }
+  // 사용자가 취소/저장으로 닫을 땐 push해둔 history entry도 같이 정리
+  if (wasOpen && history.state && history.state.modal) {
+    history.back();
+  }
 }
+window.addEventListener('popstate', () => {
+  if (modalIsOpen) closeModal();
+});
 
 function attachAmountFormatter(input) {
   input.addEventListener('input', () => {
