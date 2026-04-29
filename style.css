@@ -578,7 +578,7 @@ body::before {
 .modal {
   position: fixed;
   left: 50%;
-  bottom: 0;
+  bottom: var(--kb-h, 0px);
   transform: translateX(-50%) translateY(105%);
   width: 100%;
   max-width: 480px;
@@ -586,7 +586,7 @@ body::before {
   border-radius: 28px 28px 0 0;
   padding: 8px var(--pad) calc(env(safe-area-inset-bottom) + 24px);
   z-index: 101;
-  transition: transform 0.42s var(--ease-out);
+  transition: transform 0.42s var(--ease-out), bottom 0.2s var(--ease-out);
   max-height: 90vh;
   overflow-y: auto;
 }

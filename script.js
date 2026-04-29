@@ -582,6 +582,21 @@ function showToast(message) {
 
 /* ---------- MODALS ---------- */
 let modalIsOpen = false;
+function bindKeyboardOffset(modal) {
+  if (!window.visualViewport) return null;
+  const vv = window.visualViewport;
+  const update = () => {
+    const kbH = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    modal.style.setProperty('--kb-h', kbH + 'px');
+  };
+  vv.addEventListener('resize', update);
+  vv.addEventListener('scroll', update);
+  update();
+  return () => {
+    vv.removeEventListener('resize', update);
+    vv.removeEventListener('scroll', update);
+  };
+}
 function openModal(content) {
   closeModal(true);
   const backdrop = el(`<div class="modal-backdrop"></div>`);
@@ -594,11 +609,14 @@ function openModal(content) {
   requestAnimationFrame(() => backdrop.classList.add('is-open'));
   modalIsOpen = true;
   history.pushState({ modal: true }, '');
+  modal._kbCleanup = bindKeyboardOffset(modal);
   return { backdrop, modal };
 }
 function closeModal(immediate = false) {
   const bd = modalRoot.querySelector('.modal-backdrop');
   if (!bd) return;
+  const modal = bd.querySelector('.modal');
+  if (modal && modal._kbCleanup) { modal._kbCleanup(); modal._kbCleanup = null; }
   const wasOpen = modalIsOpen;
   modalIsOpen = false;
   if (immediate) {
