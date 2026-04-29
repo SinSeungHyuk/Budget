@@ -8,7 +8,7 @@ const MONTH_NAMES = ['January','February','March','April','May','June','July','A
 
 /* ---------- state ---------- */
 function defaultState() {
-  return { currentMonth: monthKey(new Date()), expenses: [], budgets: {} };
+  return { currentMonth: monthKey(new Date()), expenses: [], budgets: {}, templates: [] };
 }
 function loadState() {
   try {
@@ -23,6 +23,25 @@ function saveState() {
 }
 let state = loadState();
 state.currentMonth = monthKey(new Date());
+let __seededCount = 0;
+function seedTemplates() {
+  const m = monthKey(new Date());
+  const [y, mo] = m.split('-').map(Number);
+  state.templates.forEach(t => {
+    if (t.lastInsertedMonth === m) return;
+    const date = new Date(y, mo - 1, 1, 9, 0, 0);
+    state.expenses.push({
+      id: uid(),
+      date: date.toISOString(),
+      amount: t.amount,
+      category: t.category,
+      memo: t.memo
+    });
+    t.lastInsertedMonth = m;
+    __seededCount++;
+  });
+}
+seedTemplates();
 saveState();
 
 /* ---------- utils ---------- */
@@ -238,6 +257,8 @@ function renderCategory(cat) {
   const ex = getMonthExpenses(month).filter(e => e.category === cat).sort((a,b) => b.date.localeCompare(a.date));
   const total = ex.reduce((a,b) => a + b.amount, 0);
   const { name, year } = monthLabel(month);
+  const templates = state.templates.filter(t => t.category === cat);
+  const curMonth = isCurrentMonth();
 
   app.appendChild(el(`
     <header class="detail-header">
@@ -252,6 +273,44 @@ function renderCategory(cat) {
     </header>
   `));
 
+  const showTemplates = templates.length > 0 || curMonth;
+  if (showTemplates) {
+    const tplSection = el(`
+      <section class="templates-section">
+        <div class="section-label">
+          <span>고정 지출</span>
+          ${curMonth && templates.length > 0 ? `<button class="section-add" id="tpl-add" aria-label="템플릿 추가"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>` : ''}
+        </div>
+        ${templates.length > 0
+          ? '<ul class="templates-list" id="tpl-list"></ul>'
+          : (curMonth ? '<div class="templates-empty" id="tpl-empty">+ 고정지출 추가</div>' : '')}
+      </section>
+    `);
+    app.appendChild(tplSection);
+
+    if (templates.length > 0) {
+      const list = tplSection.querySelector('#tpl-list');
+      templates.forEach(t => {
+        const row = el(`
+          <li class="template" data-id="${t.id}">
+            <div class="template-memo ${t.memo ? '' : 'empty'}">${t.memo ? escapeHtml(t.memo) : '메모 없음'}</div>
+            <div class="template-amount">${fmt(t.amount)}</div>
+          </li>
+        `);
+        bindLongPress(row, () => openTemplateModal(cat, t.id), null);
+        bindSwipeDelete(row, () => {
+          state.templates = state.templates.filter(x => x.id !== t.id);
+          saveState();
+          setTimeout(render, 250);
+        });
+        list.appendChild(row);
+      });
+      tplSection.querySelector('#tpl-add')?.addEventListener('click', () => openTemplateModal(cat));
+    } else if (curMonth) {
+      tplSection.querySelector('#tpl-empty').addEventListener('click', () => openTemplateModal(cat));
+    }
+  }
+
   if (ex.length === 0) {
     app.appendChild(el(`
       <div class="empty-state">
@@ -260,6 +319,9 @@ function renderCategory(cat) {
       </div>
     `));
   } else {
+    if (showTemplates) {
+      app.appendChild(el(`<div class="section-label entries-label"><span>기록</span></div>`));
+    }
     const list = el('<section class="entries"></section>');
     ex.forEach((e, i) => {
       const node = el(`
@@ -296,6 +358,19 @@ function renderCategory(cat) {
     if (history.length > 1) history.back();
     else navigate('');
   });
+}
+
+/* ---------- TOAST ---------- */
+function showToast(message) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const toast = el(`<div class="toast">${escapeHtml(message)}</div>`);
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('is-visible'));
+  setTimeout(() => {
+    toast.classList.remove('is-visible');
+    setTimeout(() => toast.remove(), 320);
+  }, 2500);
 }
 
 /* ---------- MODALS ---------- */
@@ -465,6 +540,71 @@ function openBudgetModal(cat) {
   setTimeout(() => input.focus(), 250);
 }
 
+function openTemplateModal(cat, templateId = null) {
+  const existing = templateId ? state.templates.find(t => t.id === templateId) : null;
+  const { modal } = openModal(`
+    <div class="modal-title">${existing ? '템플릿 수정' : '고정지출 추가'}</div>
+    <div class="modal-subtitle">${escapeHtml(cat)} · 매월 1일</div>
+    <div class="field">
+      <input type="text" inputmode="numeric" pattern="[0-9,]*" class="field-input is-amount" id="amount-input" placeholder="0" value="${existing ? fmt(existing.amount) : ''}" />
+    </div>
+    <div class="field">
+      <label class="field-label">메모</label>
+      <input type="text" class="field-input" id="memo-input" placeholder="(예: 월세)" maxlength="60" value="${existing ? escapeHtml(existing.memo || '') : ''}" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="cancel-btn">취소</button>
+      <button class="btn btn-primary" id="save-btn" ${existing ? '' : 'disabled'}>저장</button>
+    </div>
+  `);
+
+  const amountInput = modal.querySelector('#amount-input');
+  const memoInput = modal.querySelector('#memo-input');
+  const saveBtn = modal.querySelector('#save-btn');
+
+  attachAmountFormatter(amountInput);
+  amountInput.addEventListener('input', () => {
+    const amt = Number(amountInput.value.replace(/,/g, ''));
+    saveBtn.disabled = !(amt > 0);
+  });
+
+  modal.querySelector('#cancel-btn').addEventListener('click', () => closeModal());
+  saveBtn.addEventListener('click', () => {
+    const amt = Number(amountInput.value.replace(/,/g, ''));
+    if (!(amt > 0)) return;
+    const memo = memoInput.value.trim();
+    if (existing) {
+      existing.amount = amt;
+      existing.memo = memo;
+    } else {
+      const cm = monthKey(new Date());
+      const [y, mo] = cm.split('-').map(Number);
+      const date = new Date(y, mo - 1, 1, 9, 0, 0);
+      const newT = {
+        id: uid(),
+        category: cat,
+        memo: memo,
+        amount: amt,
+        lastInsertedMonth: cm,
+        createdAt: new Date().toISOString()
+      };
+      state.templates.push(newT);
+      state.expenses.push({
+        id: uid(),
+        date: date.toISOString(),
+        amount: amt,
+        category: cat,
+        memo: memo
+      });
+    }
+    saveState();
+    closeModal();
+    setTimeout(render, 100);
+  });
+
+  if (!existing) setTimeout(() => amountInput.focus(), 250);
+}
+
 function openMonthPicker() {
   const [curY, curM] = state.currentMonth.split('-').map(Number);
   const today = new Date();
@@ -609,3 +749,7 @@ function bindSwipeDelete(target, onDelete, threshold = 90) {
 
 /* ---------- INIT ---------- */
 render();
+if (__seededCount > 0) {
+  const [, mo] = monthKey(new Date()).split('-').map(Number);
+  setTimeout(() => showToast(`${mo}월 고정지출 ${__seededCount}건 추가`), 500);
+}
