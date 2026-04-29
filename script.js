@@ -78,6 +78,39 @@ function getCategoryTotals(month) {
   });
   return totals;
 }
+function getMonthTotals() {
+  const map = new Map();
+  for (const e of state.expenses) {
+    const m = e.date.slice(0, 7);
+    map.set(m, (map.get(m) || 0) + e.amount);
+  }
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-12)
+    .map(([month, total]) => ({ month, total }));
+}
+function donutSlicePath(startAngle, endAngle, rOuter, rInner) {
+  const cx = 50, cy = 50;
+  const x1 = cx + rOuter * Math.sin(startAngle);
+  const y1 = cy - rOuter * Math.cos(startAngle);
+  const x2 = cx + rOuter * Math.sin(endAngle);
+  const y2 = cy - rOuter * Math.cos(endAngle);
+  const x3 = cx + rInner * Math.sin(endAngle);
+  const y3 = cy - rInner * Math.cos(endAngle);
+  const x4 = cx + rInner * Math.sin(startAngle);
+  const y4 = cy - rInner * Math.cos(startAngle);
+  const largeArc = (endAngle - startAngle) > Math.PI ? 1 : 0;
+  return `M ${x1.toFixed(3)} ${y1.toFixed(3)} A ${rOuter} ${rOuter} 0 ${largeArc} 1 ${x2.toFixed(3)} ${y2.toFixed(3)} L ${x3.toFixed(3)} ${y3.toFixed(3)} A ${rInner} ${rInner} 0 ${largeArc} 0 ${x4.toFixed(3)} ${y4.toFixed(3)} Z`;
+}
+function donutFullPath(rOuter, rInner) {
+  const cx = 50, cy = 50;
+  return `M ${cx - rOuter} ${cy} A ${rOuter} ${rOuter} 0 1 0 ${cx + rOuter} ${cy} A ${rOuter} ${rOuter} 0 1 0 ${cx - rOuter} ${cy} Z M ${cx - rInner} ${cy} A ${rInner} ${rInner} 0 1 1 ${cx + rInner} ${cy} A ${rInner} ${rInner} 0 1 1 ${cx - rInner} ${cy} Z`;
+}
+function donutColor(idx, total) {
+  if (total <= 1) return 'hsl(36 12% 18%)';
+  const L = 18 + (idx / (total - 1)) * 44;
+  return `hsl(36 12% ${L.toFixed(1)}%)`;
+}
 function makeRecordDate(monthStr) {
   const now = new Date();
   const [y, m] = monthStr.split('-').map(Number);
@@ -93,6 +126,7 @@ function isCurrentMonth() {
 /* ---------- routing ---------- */
 function parseRoute() {
   const h = location.hash.slice(2);
+  if (h === 'stats') return { name: 'stats' };
   if (h.startsWith('category/')) {
     return { name: 'category', cat: decodeURIComponent(h.slice(9)) };
   }
@@ -116,6 +150,7 @@ function render() {
   app.innerHTML = '';
   if (route.name === 'home') renderHome();
   else if (route.name === 'category') renderCategory(route.cat);
+  else if (route.name === 'stats') renderStats();
 }
 
 /* ---------- HOME ---------- */
@@ -142,12 +177,16 @@ function renderHome() {
   `);
   app.appendChild(header);
 
+  const hasAnyExpense = state.expenses.length > 0;
   const summary = el(`
-    <section class="summary">
+    <section class="summary ${hasAnyExpense ? 'is-tappable' : ''}">
       <div class="summary-label">Total</div>
       <div class="summary-amount"><span class="currency">₩</span>${fmt(sumTotal)}</div>
     </section>
   `);
+  if (hasAnyExpense) {
+    summary.addEventListener('click', () => navigate('stats'));
+  }
   app.appendChild(summary);
 
   const cards = el(`<section class="cards"></section>`);
@@ -358,6 +397,152 @@ function renderCategory(cat) {
     if (history.length > 1) history.back();
     else navigate('');
   });
+}
+
+/* ---------- STATS ---------- */
+function renderStats() {
+  const month = state.currentMonth;
+  const totals = getCategoryTotals(month);
+  const sumTotal = Object.values(totals).reduce((a, b) => a + b, 0);
+  const { name, year } = monthLabel(month);
+
+  const header = el(`
+    <header class="header">
+      <button class="month-nav" id="prev-month" aria-label="이전 달">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="month-display">
+        <div class="month-year">${year}</div>
+        <div class="month-name">${name}</div>
+      </div>
+      <button class="month-nav" id="next-month" aria-label="다음 달">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </header>
+  `);
+  app.appendChild(header);
+
+  const backRow = el(`
+    <div class="stats-back">
+      <button class="back-btn" id="back-btn" aria-label="뒤로">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="stats-back-label">통계</div>
+      <div></div>
+    </div>
+  `);
+  app.appendChild(backRow);
+
+  const sortedCats = CATEGORIES
+    .map(c => ({ cat: c, amount: totals[c] }))
+    .filter(x => x.amount > 0)
+    .sort((a, b) => b.amount - a.amount);
+
+  const donutSection = el(`<section class="stats-section donut-section"></section>`);
+  donutSection.appendChild(el(`<div class="section-label inline"><span>이번 달 사용처</span></div>`));
+
+  if (sortedCats.length === 0) {
+    donutSection.appendChild(el(`
+      <div class="donut-empty">
+        <div class="empty-state-mark">∅</div>
+        <div class="empty-state-text">이번 달 지출 없음</div>
+      </div>
+    `));
+  } else {
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('class', 'donut-svg');
+    svg.setAttribute('viewBox', '0 0 100 100');
+    svg.setAttribute('width', '220');
+    svg.setAttribute('height', '220');
+
+    const rOuter = 42, rInner = 26;
+    if (sortedCats.length === 1) {
+      const path = document.createElementNS(svgNS, 'path');
+      path.setAttribute('d', donutFullPath(rOuter, rInner));
+      path.setAttribute('fill', donutColor(0, 1));
+      path.setAttribute('fill-rule', 'evenodd');
+      path.style.cursor = 'pointer';
+      path.addEventListener('click', () => navigate('category/' + encodeURIComponent(sortedCats[0].cat)));
+      svg.appendChild(path);
+    } else {
+      let acc = 0;
+      sortedCats.forEach((s, i) => {
+        const angleStart = (acc / sumTotal) * Math.PI * 2;
+        acc += s.amount;
+        const angleEnd = (acc / sumTotal) * Math.PI * 2;
+        const path = document.createElementNS(svgNS, 'path');
+        path.setAttribute('d', donutSlicePath(angleStart, angleEnd, rOuter, rInner));
+        path.setAttribute('fill', donutColor(i, sortedCats.length));
+        path.style.cursor = 'pointer';
+        path.addEventListener('click', () => navigate('category/' + encodeURIComponent(s.cat)));
+        svg.appendChild(path);
+      });
+    }
+
+    const wrap = el(`<div class="donut-wrap"></div>`);
+    wrap.appendChild(svg);
+    wrap.appendChild(el(`
+      <div class="donut-center">
+        <div class="donut-center-label">Total</div>
+        <div class="donut-center-amount"><span class="currency">₩</span>${fmt(sumTotal)}</div>
+      </div>
+    `));
+    donutSection.appendChild(wrap);
+
+    const list = el(`<ul class="cat-list"></ul>`);
+    sortedCats.forEach((s, i) => {
+      const pct = Math.round((s.amount / sumTotal) * 100);
+      const row = el(`
+        <li class="cat-row" data-cat="${escapeHtml(s.cat)}" style="animation-delay: ${30 + i * 30}ms">
+          <span class="cat-chip-color" style="background: ${donutColor(i, sortedCats.length)}"></span>
+          <span class="cat-row-name">${escapeHtml(s.cat)}</span>
+          <span class="cat-row-amount">${fmt(s.amount)}</span>
+          <span class="cat-row-pct">${pct}%</span>
+        </li>
+      `);
+      row.addEventListener('click', () => navigate('category/' + encodeURIComponent(s.cat)));
+      list.appendChild(row);
+    });
+    donutSection.appendChild(list);
+  }
+
+  app.appendChild(donutSection);
+
+  const monthTotals = getMonthTotals();
+  if (monthTotals.length > 1) {
+    const compareSection = el(`<section class="stats-section compare-section"></section>`);
+    compareSection.appendChild(el(`<div class="section-label inline"><span>월별 비교</span></div>`));
+
+    const max = Math.max(...monthTotals.map(m => m.total));
+    const bars = el(`<div class="month-bars"></div>`);
+    monthTotals.forEach((m, i) => {
+      const h = max > 0 ? (m.total / max) * 100 : 0;
+      const isCurrent = m.month === state.currentMonth;
+      const [my, mm] = m.month.split('-');
+      const prevYear = i > 0 ? monthTotals[i - 1].month.split('-')[0] : null;
+      const showYear = prevYear !== my;
+      const item = el(`
+        <button class="month-bar-item ${isCurrent ? 'is-current' : ''}" data-month="${m.month}" style="animation-delay: ${60 + i * 50}ms">
+          <span class="month-bar-track">
+            <span class="month-bar-fill" style="--target: ${(h / 100).toFixed(3)}"></span>
+          </span>
+          <span class="month-bar-label">${showYear ? `${my.slice(2)}.${mm}` : mm}</span>
+        </button>
+      `);
+      item.addEventListener('click', () => setMonth(m.month));
+      bars.appendChild(item);
+    });
+    compareSection.appendChild(bars);
+    app.appendChild(compareSection);
+  }
+
+  app.appendChild(el(`<div class="brand">a budget journal</div>`));
+
+  header.querySelector('#prev-month').addEventListener('click', () => changeMonth(-1));
+  header.querySelector('#next-month').addEventListener('click', () => changeMonth(1));
+  header.querySelector('.month-display').addEventListener('click', () => openMonthPicker());
+  app.querySelector('#back-btn').addEventListener('click', () => navigate(''));
 }
 
 /* ---------- TOAST ---------- */
