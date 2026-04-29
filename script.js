@@ -603,8 +603,13 @@ function openModal(content) {
   const modal = el(`<div class="modal"><div class="modal-handle"></div>${content}</div>`);
   backdrop.appendChild(modal);
   modalRoot.appendChild(backdrop);
+  let downOnBackdrop = false;
+  backdrop.addEventListener('pointerdown', e => {
+    downOnBackdrop = (e.target === backdrop);
+  });
   backdrop.addEventListener('click', e => {
-    if (e.target === backdrop) closeModal();
+    if (e.target === backdrop && downOnBackdrop) closeModal();
+    downOnBackdrop = false;
   });
   requestAnimationFrame(() => backdrop.classList.add('is-open'));
   modalIsOpen = true;
