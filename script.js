@@ -583,18 +583,43 @@ function showToast(message) {
 /* ---------- MODALS ---------- */
 let modalIsOpen = false;
 function bindKeyboardOffset(modal) {
-  if (!window.visualViewport) return null;
   const vv = window.visualViewport;
-  const update = () => {
-    const kbH = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-    modal.classList.toggle('is-kb-up', kbH > 100);
+  const cleanups = [];
+
+  const setKbUp = (on) => {
+    modal.classList.toggle('is-kb-up', on);
+    if (!on) {
+      modal.style.removeProperty('--vv-top');
+      modal.style.removeProperty('--vv-h');
+    }
   };
-  vv.addEventListener('resize', update);
-  vv.addEventListener('scroll', update);
-  return () => {
-    vv.removeEventListener('resize', update);
-    vv.removeEventListener('scroll', update);
-  };
+
+  if (vv) {
+    const update = () => {
+      const kbH = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      const isKbUp = kbH > 100;
+      if (isKbUp) {
+        modal.style.setProperty('--vv-top', vv.offsetTop + 'px');
+        modal.style.setProperty('--vv-h', (vv.height - 8) + 'px');
+      }
+      setKbUp(isKbUp);
+    };
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    cleanups.push(() => vv.removeEventListener('resize', update));
+    cleanups.push(() => vv.removeEventListener('scroll', update));
+  } else {
+    const onIn = (e) => { if (e.target.matches('input, textarea')) setKbUp(true); };
+    const onOut = () => setTimeout(() => {
+      if (!modal.contains(document.activeElement)) setKbUp(false);
+    }, 100);
+    modal.addEventListener('focusin', onIn);
+    modal.addEventListener('focusout', onOut);
+    cleanups.push(() => modal.removeEventListener('focusin', onIn));
+    cleanups.push(() => modal.removeEventListener('focusout', onOut));
+  }
+
+  return () => cleanups.forEach(f => f());
 }
 function openModal(content) {
   closeModal(true);
