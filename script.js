@@ -8,7 +8,7 @@ const MONTH_NAMES = ['January','February','March','April','May','June','July','A
 
 /* ---------- state ---------- */
 function defaultState() {
-  return { currentMonth: monthKey(new Date()), expenses: [], budgets: {}, templates: [] };
+  return { currentMonth: monthKey(new Date()), expenses: [], budgets: {}, templates: [], sortBy: 'date' };
 }
 function loadState() {
   try {
@@ -293,7 +293,10 @@ function setMonth(monthStr) {
 function renderCategory(cat) {
   if (!CATEGORIES.includes(cat)) { navigate(''); return; }
   const month = state.currentMonth;
-  const ex = getMonthExpenses(month).filter(e => e.category === cat).sort((a,b) => b.date.localeCompare(a.date));
+  const sortBy = state.sortBy || 'date';
+  const ex = getMonthExpenses(month).filter(e => e.category === cat).sort((a,b) =>
+    sortBy === 'amount' ? b.amount - a.amount : b.date.localeCompare(a.date)
+  );
   const total = ex.reduce((a,b) => a + b.amount, 0);
   const { name, year } = monthLabel(month);
   const templates = state.templates.filter(t => t.category === cat);
@@ -358,8 +361,27 @@ function renderCategory(cat) {
       </div>
     `));
   } else {
-    if (showTemplates) {
-      app.appendChild(el(`<div class="section-label entries-label"><span>기록</span></div>`));
+    const hasMultiple = ex.length > 1;
+    if (showTemplates || hasMultiple) {
+      const labelHtml = showTemplates ? '<span>기록</span>' : '<span></span>';
+      const chipsHtml = hasMultiple ? `
+        <div class="sort-chips">
+          <button class="sort-chip ${sortBy === 'date' ? 'is-active' : ''}" data-sort="date">시간</button>
+          <button class="sort-chip ${sortBy === 'amount' ? 'is-active' : ''}" data-sort="amount">금액</button>
+        </div>` : '';
+      const row = el(`<div class="section-label entries-label">${labelHtml}${chipsHtml}</div>`);
+      if (hasMultiple) {
+        row.querySelectorAll('.sort-chip').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const v = btn.dataset.sort;
+            if (state.sortBy === v) return;
+            state.sortBy = v;
+            saveState();
+            render();
+          });
+        });
+      }
+      app.appendChild(row);
     }
     const list = el('<section class="entries"></section>');
     ex.forEach((e, i) => {

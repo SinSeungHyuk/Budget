@@ -640,6 +640,31 @@ body::before {
 }
 .cat-chip:active { transform: scale(0.95); }
 
+.sort-chips {
+  display: flex;
+  gap: 4px;
+}
+.sort-chip {
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 180ms var(--ease-snap);
+  text-transform: none;
+}
+.sort-chip.is-active {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.sort-chip:active { transform: scale(0.94); }
+
 .field { margin-bottom: 14px; }
 .field-label {
   font-size: 11px;
