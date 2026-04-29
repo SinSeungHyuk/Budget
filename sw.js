@@ -1,4 +1,4 @@
-const CACHE = 'budget-v1';
+const CACHE = 'budget-v2';
 const APP_SHELL = [
   './',
   './index.html',

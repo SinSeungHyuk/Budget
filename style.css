@@ -592,9 +592,8 @@ body::before {
 }
 .modal-backdrop.is-open .modal { transform: translateX(-50%) translateY(0); }
 .modal.is-kb-up {
-  top: var(--vv-top, 0px);
+  top: 0;
   bottom: auto;
-  max-height: var(--vv-h, 50vh);
   transform: translateX(-50%) translateY(-105%);
   border-radius: 0 0 28px 28px;
 }
